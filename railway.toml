@@ -1,0 +1,17 @@
+# Railway.app deployment configuration
+build:
+  builder: NIXPACKS
+  buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+  
+deploy:
+  startCommand: "gunicorn main:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1"
+  healthCheckPath: "/health"
+  numReplicas: 1
+  sleepApplication: false
+  restartPolicyType: ON_FAILURE
+  
+env:
+  PYTHONUNBUFFERED: 1
+  FLASK_ENV: production
+  GUNICORN_TIMEOUT: 120
+  WEB_CONCURRENCY: 1
