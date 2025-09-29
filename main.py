@@ -1,9 +1,7 @@
-import discord
 import easyocr
 import re
-import os
 import io
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify
 
 # --- OCR機能の準備 ---
 
@@ -79,71 +77,31 @@ def extract_stock_from_image(image_data):
                         break
     return stock
 
-# --- Discordボットのセットアップ ---
+# --- Flaskアプリのセットアップ ---
 
-intents = discord.Intents.default()
-intents.message_content = True  # メッセージの内容を読み取るために必要
-client = discord.Client(intents=intents)
+app = Flask(__name__)
 
-@client.event
-async def on_ready():
-    """ボットがログインしたときに呼ばれるイベント"""
-    print("------------------------------------------------------")
-    print(f'{client.user} としてDiscordにログインしました。')
-    print("画像が投稿されるのを待っています...")
-    print("------------------------------------------------------")
+@app.route('/scan', methods=['POST'])
+def scan_image():
+    """
+    画像ファイルを受け取り、OCR処理を実行して結果をJSONで返します。
+    """
+    if 'file' not in request.files:
+        return jsonify({"error": "ファイルがありません"}), 400
 
-@client.event
-async def on_message(message):
-    """メッセージが投稿されたときに呼ばれるイベント"""
-    if message.author == client.user:
-        return
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "ファイルが選択されていません"}), 400
 
-    if message.attachments:
-        for attachment in message.attachments:
-            if attachment.content_type and attachment.content_type.startswith('image/'):
-                print(f"{message.channel}チャンネルに画像が投稿されました: {attachment.filename}")
-                
-                async with message.channel.typing():
-                    await message.add_reaction('🤔')  # 考え中...
-                    
-                    image_data = await attachment.read()
-                    stock_data = extract_stock_from_image(image_data)
-
-                    await message.remove_reaction('🤔', client.user)
-
-                    if "error" in stock_data:
-                        await message.channel.send(f"エラーが発生しました: {stock_data['error']}")
-                        await message.add_reaction('❌')
-                        continue
-
-                    if not stock_data:
-                        response = "画像から在庫情報を読み取れませんでした。😭"
-                        await message.add_reaction('🤷')
-                    else:
-                        response = "📄 **在庫サマリー** 📄\n" + "-" * 20 + "\n"
-                        for item, count in stock_data.items():
-                            response += f"**{item}**: {count}\n"
-                        response += "-" * 20
-                        await message.add_reaction('✅')
-
-                    await message.reply(response, mention_author=False)
-
-def main():
-    """メイン関数。ボットを起動します。"""
-    load_dotenv()
-    token = os.getenv('DISCORD_TOKEN')
-    
-    if not token:
-        print("エラー: DISCORD_TOKENが設定されていません。")
-        print("プロジェクトフォルダに '.env' という名前のファイルを作成し、")
-        print("その中に 'DISCORD_TOKEN=あなたのボットのトークン' と記述してください。")
-        return
-
-    try:
-        client.run(token)
-    except discord.errors.LoginFailure:
-        print("エラー: 無効なDiscordトークンです。トークンが正しいか確認してください。")
+    if file:
+        image_data = file.read()
+        stock_data = extract_stock_from_image(image_data)
+        
+        if "error" in stock_data:
+            return jsonify(stock_data), 500
+            
+        return jsonify(stock_data)
 
 if __name__ == "__main__":
-    main()
+    # 本番環境ではGunicornなどを使用してください
+    app.run(debug=True, host='0.0.0.0', port=5000)

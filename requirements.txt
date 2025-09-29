@@ -1,4 +1,4 @@
 easyocr
 Pillow
-discord.py
-python-dotenv
+Flask
+gunicorn
