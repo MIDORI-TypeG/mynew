@@ -1,14 +1,14 @@
 services:
   - type: web
     name: ocr-flask-app
-    runtime: python3
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn main:app --bind 0.0.0.0:$PORT
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn main:app --bind 0.0.0.0:$PORT --timeout 120"
     envVars:
       - key: FLASK_ENV
         value: production
       - key: PYTHON_VERSION
-        value: 3.9.16
+        value: "3.9.16"
     plan: free
     region: oregon
     autoDeploy: true

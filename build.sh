@@ -1,7 +1,8 @@
 #!/bin/bash
-# Render build script
 
-echo "Installing dependencies..."
-pip install -r requirements.txt
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
-echo "Build completed successfully!"
+# Pre-download easyocr models
+python -c "import easyocr; easyocr.Reader(['ja', 'en'])"
